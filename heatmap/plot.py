@@ -152,7 +152,6 @@ def compute_and_plot_colormesh(
     else:
         fig, ax = figax
 
-    fig, ax = figax
     pcm = ax.pcolormesh(X_mesh, Y_mesh, Z, cmap="viridis")
     ax.set_ylim(y_values.min(), y_values.max())
     ax.set_xlim(x_values.min(), x_values.max())
