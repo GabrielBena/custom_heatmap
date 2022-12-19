@@ -52,20 +52,15 @@ def movingaverage(interval, window_size):
     return np.convolve(interval, window, "same")
 
 
-def compute_and_plot_heatmap(
-    values,
-    figax=None,
-    log_scale=False,
-    plot_f=False,
-    random=True,
-    minmax=(0, 1),
-    smoothness=7,
-    resolution=100,
-    eps=1e-4,
-):
+def normalize(values):
+    return [v / np.linalg.norm(v, 2) for v in values]
 
-    x_values, y_values, z_values = filter_nans(values)
 
+def get_meshgrid(values, resolution, log_scale=False, random=False):
+
+    eps = 1e-10
+
+    x_values, y_values, z_values = values
     if random:
         idxs = np.arange(len(x_values))
         np.random.shuffle(idxs)
@@ -89,12 +84,32 @@ def compute_and_plot_heatmap(
 
     Xm, Ym = np.meshgrid(X, Y)
 
+    return (Xm, Ym), (X, Y)
+
+
+def compute_and_plot_heatmap(
+    values,
+    figax=None,
+    log_scale=False,
+    plot_f=False,
+    random=True,
+    minmax=(0, 1),
+    smoothness=7,
+    resolution=100,
+    eps=1e-4,
+    normalize_values=True,
+):
+
+    values = x_values, y_values, z_values = filter_nans(values)
+    (Xm, Ym), (X, Y) = get_meshgrid(values, resolution, log_scale, random)
+
     # ratio = y_values / x_values
     # ratio = movingaverage(ratio, len(ratio) // 3)
     # sigmas = np.array([np.ones_like(ratio), ratio * 3]) * smoothness
 
     ratio = (y_values / x_values).mean()
-    sigmas = np.array([1, 2 * ratio]) * smoothness
+    print(ratio)
+    sigmas = np.array([1, ratio if normalize_values else 1]) * smoothness
 
     vect_avg = np.vectorize(
         lambda x, y: weighted_average(x, y, sigmas, values), signature=("(),()->()")
@@ -132,11 +147,13 @@ def compute_and_plot_colormesh(
 
     eps = 1e-4
 
-    if not log_scale:
+    if True:
+
         X = np.linspace(x_values.min(), x_values.max(), resolution)
         Y = np.linspace(
             y_values.min(), y_values.max(), resolution
         )  # 500 x 500 takes 10s
+
     else:
         X = np.geomspace(np.maximum(x_values.min(), eps), x_values.max(), resolution)
         Y = np.geomspace(np.maximum(y_values.min(), eps), y_values.max(), resolution)
@@ -152,9 +169,17 @@ def compute_and_plot_colormesh(
     else:
         fig, ax = figax
 
+    fig, ax = figax
     pcm = ax.pcolormesh(X_mesh, Y_mesh, Z, cmap="viridis")
     ax.set_ylim(y_values.min(), y_values.max())
     ax.set_xlim(x_values.min(), x_values.max())
     cbar = fig.colorbar(pcm, ax=ax)
+
+    if log_scale:
+
+        """"""
+        # ax.set.xscale("log")
+        #
+        ax.set_yscale("log")
 
     return X_mesh, Y_mesh, Z, (fig, ax), cbar
